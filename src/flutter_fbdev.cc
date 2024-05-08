@@ -1,0 +1,138 @@
+#include <iostream>
+#include <fstream>
+#include <cstdint>
+#include <vector>
+
+#include "embedder.h"
+#include <istream>
+
+using namespace std;
+
+string fb_device;
+
+size_t width;
+size_t height;
+
+vector<size_t> GetScreenSize(const string &fb_device)
+{
+    string fb_info_path = "/sys/class/graphics/" + fb_device + "/virtual_size";
+
+    ifstream fb_info_file(fb_info_path);
+    if (!fb_info_file.is_open())
+    {
+        cout << "Could not open " << fb_info_path << endl;
+        return {0, 0};
+    }
+
+    size_t x, y;
+
+    fb_info_file >> x >> y;
+    cout << "Screen size: " << x << "x" << y << endl;
+    return {x, y};
+}
+
+void WriteFramebuffer(const void* framebuffer)
+{
+    string fb_path = "/dev/" + fb_device;
+
+    ofstream fb_file(fb_path, ios::binary);
+    if (!fb_file.is_open())
+    {
+        cout << "Could not open " << fb_path << endl;
+        return;
+    }
+
+    fb_file.write((const char*)framebuffer, width * height * 4);
+}
+
+void PrintUsage()
+{
+    cout << "Usage: flutter_fbdev <project_path> <icudtl_path> <fb_device>" << endl;
+}
+
+bool RunFlutter(
+    const string &project_path,
+    const string &icudtl_path
+    )
+{
+
+    vector<size_t> screen_size = GetScreenSize(fb_device);
+    if (screen_size[0] == 0 || screen_size[1] == 0)
+    {
+        cout << "Could not get screen size." << endl;
+        return false;
+    }
+
+     width = screen_size[0];
+     height = screen_size[1];
+
+    FlutterRendererConfig config = {};
+    config.type = kSoftware;
+    config.software.struct_size = sizeof(config.software);
+    config.software.surface_present_callback = [](void *user_data, const void *allocation, size_t row_bytes, size_t height) -> bool
+    {
+        WriteFramebuffer(allocation);
+        return true;
+    };
+
+    string assets_path = project_path + "/build/flutter_assets";
+
+    FlutterProjectArgs args = {};
+
+    args.struct_size = sizeof(FlutterProjectArgs);
+    args.assets_path = assets_path.c_str();
+    args.icu_data_path = icudtl_path.c_str();
+
+    FlutterEngine engine = nullptr;
+    FlutterEngineResult result =
+        FlutterEngineRun(FLUTTER_ENGINE_VERSION, &config, &args, nullptr, &engine);
+
+    if (result != kSuccess || engine == nullptr)
+    {
+        cout << "Could not run the Flutter Engine." << endl;
+        return false;
+    }
+    FlutterEngineDisplay display = {};
+
+    display.struct_size = sizeof(FlutterEngineDisplay);
+    display.display_id = 0;
+    display.single_display = true;
+    display.refresh_rate = 60;
+
+    vector<FlutterEngineDisplay> displays = {display};
+    FlutterEngineNotifyDisplayUpdate(engine,
+                                     kFlutterEngineDisplaysUpdateTypeStartup,
+                                     displays.data(), displays.size());
+
+    FlutterWindowMetricsEvent metrics_event = {};
+    metrics_event.struct_size = sizeof(FlutterWindowMetricsEvent);
+    metrics_event.width = width;
+    metrics_event.height = height;
+    metrics_event.pixel_ratio = 1.0;
+    FlutterEngineSendWindowMetricsEvent(engine, &metrics_event);
+
+    return true;
+}
+
+int main(int argc, const char *argv[])
+{   
+
+    if (argc != 4)
+    {
+        PrintUsage();
+        return 1;
+    }
+
+    string project_path = argv[1];
+    string icudtl_path = argv[2];
+
+    fb_device = argv[3];
+
+    RunFlutter(project_path, icudtl_path);
+
+    while (true)
+    {
+    }
+
+    return 0;
+}
