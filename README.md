@@ -11,7 +11,7 @@ How to build it:
 mkdir build
 cd build
 cmake ..
-make -j`nproc
+make -j`nproc`
 ```
 
 This is heavily work in progress, for example there is no input handling at all.
