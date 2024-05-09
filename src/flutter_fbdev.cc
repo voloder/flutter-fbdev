@@ -6,43 +6,34 @@
 #include "embedder.h"
 #include <istream>
 
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 using namespace std;
 
-string fb_device;
+int fbfd;
 
 size_t width;
 size_t height;
 
-vector<size_t> GetScreenSize(const string &fb_device)
+fb_var_screeninfo GetScreenInfo(const int fbfd)
 {
-    string fb_info_path = "/sys/class/graphics/" + fb_device + "/virtual_size";
+    struct fb_var_screeninfo vinfo;
+    ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo); // todo check return value
 
-    ifstream fb_info_file(fb_info_path);
-    if (!fb_info_file.is_open())
-    {
-        cout << "Could not open " << fb_info_path << endl;
-        return {0, 0};
-    }
-
-    size_t x, y;
-
-    fb_info_file >> x >> y;
-    cout << "Screen size: " << x << "x" << y << endl;
-    return {x, y};
+    return vinfo;
 }
 
 void WriteFramebuffer(const void* framebuffer)
 {
-    string fb_path = "/dev/" + fb_device;
+    struct fb_var_screeninfo vinfo = GetScreenInfo(fbfd);
 
-    ofstream fb_file(fb_path, ios::binary);
-    if (!fb_file.is_open())
-    {
-        cout << "Could not open " << fb_path << endl;
-        return;
-    }
+    size_t screensize = vinfo.yres_virtual * vinfo.xres_virtual * vinfo.bits_per_pixel / 8;
 
-    fb_file.write((const char*)framebuffer, width * height * 4);
+    lseek(fbfd, 0, SEEK_SET);
+    write(fbfd, framebuffer, screensize);
 }
 
 void PrintUsage()
@@ -52,19 +43,22 @@ void PrintUsage()
 
 bool RunFlutter(
     const string &project_path,
-    const string &icudtl_path
+    const string &icudtl_path,
+    const int fbfd
     )
 {
+    fb_var_screeninfo vinfo = GetScreenInfo(fbfd);
 
-    vector<size_t> screen_size = GetScreenSize(fb_device);
-    if (screen_size[0] == 0 || screen_size[1] == 0)
+    if (vinfo.xres_virtual == 0 || vinfo.yres_virtual == 0)
     {
-        cout << "Could not get screen size." << endl;
+        cout << "Could not get screen info." << endl;
         return false;
     }
 
-     width = screen_size[0];
-     height = screen_size[1];
+    width = vinfo.xres_virtual;
+    height = vinfo.yres_virtual;
+
+    cout << "Screen resolution: " << width << "x" << height << endl;
 
     FlutterRendererConfig config = {};
     config.type = kSoftware;
@@ -126,13 +120,30 @@ int main(int argc, const char *argv[])
     string project_path = argv[1];
     string icudtl_path = argv[2];
 
-    fb_device = argv[3];
+    string fb_device = argv[3];
 
-    RunFlutter(project_path, icudtl_path);
+    /*void *engine_handle = dlopen("libflutter_engine.so", RTLD_LOCAL | RTLD_NOW);
+
+    if (engine_handle == nullptr)
+    {
+        cout << "Could not load libflutter_engine.so" << endl;
+        return 1;
+    }*/
+
+    fbfd = open(fb_device.c_str(), O_RDWR);
+    if (fbfd == -1)
+    {
+        cout << "Could not open " << fb_device << endl;
+        return 1;
+    }
+
+    RunFlutter(project_path, icudtl_path, fbfd);
 
     while (true)
     {
     }
+
+    close(fbfd);
 
     return 0;
 }
