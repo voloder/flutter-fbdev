@@ -122,14 +122,6 @@ int main(int argc, const char *argv[])
 
     string fb_device = argv[3];
 
-    /*void *engine_handle = dlopen("libflutter_engine.so", RTLD_LOCAL | RTLD_NOW);
-
-    if (engine_handle == nullptr)
-    {
-        cout << "Could not load libflutter_engine.so" << endl;
-        return 1;
-    }*/
-
     fbfd = open(fb_device.c_str(), O_RDWR);
     if (fbfd == -1)
     {
