@@ -9,6 +9,7 @@ include_directories(${CMAKE_SOURCE_DIR}/third_party/flutter_embedder_header/incl
 
 find_library(FLUTTER_LIB flutter_engine PATHS
 	${CMAKE_SOURCE_DIR}/../../../out/${FLUTTER_ENGINE_VARIANT}
+        ${STAGING_DIR_TARGET}${datadir}/flutter/${FLUTTER_SDK_VERSION}/${FLUTTER_RUNTIME_MODE}/lib/
 	${CMAKE_SOURCE_DIR}
 )
 
