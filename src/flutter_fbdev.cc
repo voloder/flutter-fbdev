@@ -131,7 +131,7 @@ int main(int argc, const char *argv[])
 
     RunFlutter(project_path, icudtl_path, fbfd);
 
-    while (true)
+    while (getchar() != 'q')
     {
     }
 
