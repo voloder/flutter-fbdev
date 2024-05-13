@@ -15,8 +15,7 @@ using namespace std;
 
 int fbfd;
 
-size_t width;
-size_t height;
+fb_var_screeninfo vinfo;
 
 fb_var_screeninfo GetScreenInfo(const int fbfd)
 {
@@ -26,12 +25,9 @@ fb_var_screeninfo GetScreenInfo(const int fbfd)
     return vinfo;
 }
 
-void WriteFramebuffer(const void* framebuffer)
-{
-    struct fb_var_screeninfo vinfo = GetScreenInfo(fbfd);
-
+void WriteFramebuffer(const void *framebuffer)
+{   
     size_t screensize = vinfo.yres_virtual * vinfo.xres_virtual * vinfo.bits_per_pixel / 8;
-
     lseek(fbfd, 0, SEEK_SET);
     write(fbfd, framebuffer, screensize);
 }
@@ -44,10 +40,10 @@ void PrintUsage()
 bool RunFlutter(
     const string &project_path,
     const string &icudtl_path,
-    const int fbfd
-    )
+    const int fbfd)
 {
-    fb_var_screeninfo vinfo = GetScreenInfo(fbfd);
+
+    vinfo = GetScreenInfo(fbfd);
 
     if (vinfo.xres_virtual == 0 || vinfo.yres_virtual == 0)
     {
@@ -55,10 +51,7 @@ bool RunFlutter(
         return false;
     }
 
-    width = vinfo.xres_virtual;
-    height = vinfo.yres_virtual;
-
-    cout << "Screen resolution: " << width << "x" << height << endl;
+    cout << "Screen resolution: " << vinfo.xres_virtual << "x" << vinfo.yres_virtual << endl;
 
     FlutterRendererConfig config = {};
     config.type = kSoftware;
@@ -100,8 +93,8 @@ bool RunFlutter(
 
     FlutterWindowMetricsEvent metrics_event = {};
     metrics_event.struct_size = sizeof(FlutterWindowMetricsEvent);
-    metrics_event.width = width;
-    metrics_event.height = height;
+    metrics_event.width = vinfo.xres_virtual;
+    metrics_event.height = vinfo.yres_virtual;
     metrics_event.pixel_ratio = 1.0;
     FlutterEngineSendWindowMetricsEvent(engine, &metrics_event);
 
@@ -109,7 +102,7 @@ bool RunFlutter(
 }
 
 int main(int argc, const char *argv[])
-{   
+{
 
     if (argc != 4)
     {
