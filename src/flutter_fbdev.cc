@@ -14,7 +14,7 @@
 using namespace std;
 
 int fbfd;
-
+int pixel_format;
 fb_var_screeninfo vinfo;
 
 fb_var_screeninfo GetScreenInfo(const int fbfd)
@@ -56,8 +56,7 @@ bool RunFlutter(
     FlutterRendererConfig config = {};
     config.type = kSoftware;
     config.software.struct_size = sizeof(config.software);
-    config.software.surface_present_callback = [](void *user_data, const void *allocation, size_t row_bytes, size_t height) -> bool
-    {
+    config.software.surface_present_callback = [](void *user_data, const void *allocation, size_t row_bytes, size_t height) -> bool {
         WriteFramebuffer(allocation);
         return true;
     };
@@ -69,7 +68,21 @@ bool RunFlutter(
     args.struct_size = sizeof(FlutterProjectArgs);
     args.assets_path = assets_path.c_str();
     args.icu_data_path = icudtl_path.c_str();
+    args.compositor->create_backing_store_callback = [](void *user_data, FlutterBackingStore *store) -> bool {
+        switch(pixel_format) {
+            case 1: store->pixel_format = kFlutterSoftwarePixelFormatGray8; break;
+            case 2: store->pixel_format = kFlutterSoftwarePixelFormatRGB565; break;
+            case 3: store->pixel_format = kFlutterSoftwarePixelFormatRGBA4444; break;
+            case 4: store->pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
+            case 5: store->pixel_format = kFlutterSoftwarePixelFormatRGBX8888; break;
+            case 6: store->pixel_format = kFlutterSoftwarePixelFormatBGRA8888; break;
+            case 7: store->pixel_format = kFlutterSoftwarePixelFormatNative32; break;
+            default: store->pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
+        }
 
+        return true;
+    };
+    
     FlutterEngine engine = nullptr;
     FlutterEngineResult result =
         FlutterEngineRun(FLUTTER_ENGINE_VERSION, &config, &args, nullptr, &engine);
@@ -85,6 +98,7 @@ bool RunFlutter(
     display.display_id = 0;
     display.single_display = true;
     display.refresh_rate = 60;
+
 
     vector<FlutterEngineDisplay> displays = {display};
     FlutterEngineNotifyDisplayUpdate(engine,
@@ -104,7 +118,7 @@ bool RunFlutter(
 int main(int argc, const char *argv[])
 {
 
-    if (argc != 4)
+    if (argc != 5)
     {
         PrintUsage();
         return 1;
@@ -114,6 +128,8 @@ int main(int argc, const char *argv[])
     string icudtl_path = argv[2];
 
     string fb_device = argv[3];
+    pixel_format = atoi(argv[4]);
+
 
     fbfd = open(fb_device.c_str(), O_RDWR);
     if (fbfd == -1)
