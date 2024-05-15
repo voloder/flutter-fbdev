@@ -70,14 +70,14 @@ bool RunFlutter(
     args.icu_data_path = icudtl_path.c_str();
     args.compositor->create_backing_store_callback = [](void *user_data, FlutterBackingStore *store) -> bool {
         switch(pixel_format) {
-            case 1: store->pixel_format = kFlutterSoftwarePixelFormatGray8; break;
-            case 2: store->pixel_format = kFlutterSoftwarePixelFormatRGB565; break;
-            case 3: store->pixel_format = kFlutterSoftwarePixelFormatRGBA4444; break;
-            case 4: store->pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
-            case 5: store->pixel_format = kFlutterSoftwarePixelFormatRGBX8888; break;
-            case 6: store->pixel_format = kFlutterSoftwarePixelFormatBGRA8888; break;
-            case 7: store->pixel_format = kFlutterSoftwarePixelFormatNative32; break;
-            default: store->pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
+            case 1: store->software2.pixel_format = kFlutterSoftwarePixelFormatGray8; break;
+            case 2: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGB565; break;
+            case 3: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA4444; break;
+            case 4: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
+            case 5: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBX8888; break;
+            case 6: store->software2.pixel_format = kFlutterSoftwarePixelFormatBGRA8888; break;
+            case 7: store->software2.pixel_format = kFlutterSoftwarePixelFormatNative32; break;
+            default: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
         }
 
         return true;
