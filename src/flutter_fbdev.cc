@@ -28,14 +28,22 @@ fb_var_screeninfo GetScreenInfo(const int fbfd)
 void WriteFramebuffer(const void *framebuffer)
 {   
     size_t screensize = vinfo.yres_virtual * vinfo.xres_virtual * vinfo.bits_per_pixel / 8;
-    lseek(fbfd, 0, SEEK_SET);
-    write(fbfd, framebuffer, screensize);
+
+    int f = 0;
+    for (size_t i = 0; i < screensize; i += 4)
+    {   
+        f += 3;
+        
+        lseek(fbfd, f, SEEK_SET);
+        write(fbfd, framebuffer + f, 3);
+    }
 }
 
 void PrintUsage()
 {
     cout << "Usage: flutter_fbdev <project_path> <icudtl_path> <fb_device>" << endl;
 }
+
 
 bool RunFlutter(
     const string &project_path,
@@ -68,20 +76,7 @@ bool RunFlutter(
     args.struct_size = sizeof(FlutterProjectArgs);
     args.assets_path = assets_path.c_str();
     args.icu_data_path = icudtl_path.c_str();
-    args.compositor->create_backing_store_callback = [](void *user_data, FlutterBackingStore *store) -> bool {
-        switch(pixel_format) {
-            case 1: store->software2.pixel_format = kFlutterSoftwarePixelFormatGray8; break;
-            case 2: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGB565; break;
-            case 3: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA4444; break;
-            case 4: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
-            case 5: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBX8888; break;
-            case 6: store->software2.pixel_format = kFlutterSoftwarePixelFormatBGRA8888; break;
-            case 7: store->software2.pixel_format = kFlutterSoftwarePixelFormatNative32; break;
-            default: store->software2.pixel_format = kFlutterSoftwarePixelFormatRGBA8888; break;
-        }
-
-        return true;
-    };
+    
     
     FlutterEngine engine = nullptr;
     FlutterEngineResult result =
