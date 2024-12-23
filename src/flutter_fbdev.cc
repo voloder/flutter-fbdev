@@ -29,14 +29,8 @@ void WriteFramebuffer(const void *framebuffer)
 {   
     size_t screensize = vinfo.yres_virtual * vinfo.xres_virtual * vinfo.bits_per_pixel / 8;
 
-    int f = 0;
-    for (size_t i = 0; i < screensize; i += 4)
-    {   
-        f += 3;
-        
-        lseek(fbfd, f, SEEK_SET);
-        write(fbfd, framebuffer + f, 3);
-    }
+    lseek(fbfd, 0, SEEK_SET);
+    write(fbfd, framebuffer, screensize);
 }
 
 void PrintUsage()
